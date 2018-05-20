@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QProcess>
+#include <QJsonObject>
 
 class ButlerdConnection : public QObject
 {
@@ -21,6 +22,9 @@ public slots:
 private:
     QObject *m_parent;
     QProcess *m_proc;
+    QString m_secret;
+
+    void sendStderr(const QJsonObject &obj);
 };
 
 #endif // BUTLERDCONNECTION_H

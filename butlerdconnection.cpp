@@ -67,18 +67,25 @@ void ButlerdConnection::butlerStdoutReady()
       auto minLength = doc["minLength"].toInt();
       qDebug() << "Should generate secret, min length = " << minLength;
       auto secret = GetRandomString(minLength);
+      m_secret = secret;
       qDebug() << "Generated secret: " << secret;
 
       QJsonObject res;
       res.insert("type", "butlerd/secret-result");
       res.insert("secret", secret);
-      QJsonDocument resDoc;
-      resDoc.setObject(res);
-      auto resText = resDoc.toJson(QJsonDocument::Compact);
-      qDebug() << "Responding with: " << resText;
-      m_proc->write(resText);
-      m_proc->write("\n");
+      this->sendStderr(res);
+  } else if (type == "butlerd/listen-notification") {
+      qDebug() << "Should connect to butlerd";
   }
+}
+
+void ButlerdConnection::sendStderr(const QJsonObject &obj) {
+    QJsonDocument resDoc;
+    resDoc.setObject(obj);
+    auto resText = resDoc.toJson(QJsonDocument::Compact);
+    qDebug() << "[sending over stderr] " << resText;
+    m_proc->write(resText);
+    m_proc->write("\n");
 }
 
 void ButlerdConnection::butlerStderrReady()
