@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QProcess>
 #include <QJsonObject>
+#include <QTcpSocket>
 
 class ButlerdConnection : public QObject
 {
@@ -18,11 +19,13 @@ signals:
 public slots:
     void butlerStdoutReady();
     void butlerStderrReady();
+    void socketConnected();
 
 private:
     QObject *m_parent;
     QProcess *m_proc;
     QString m_secret;
+    QTcpSocket *m_socket;
 
     void sendStderr(const QJsonObject &obj);
 };

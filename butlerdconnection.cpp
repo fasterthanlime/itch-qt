@@ -76,6 +76,14 @@ void ButlerdConnection::butlerStdoutReady()
       this->sendStderr(res);
   } else if (type == "butlerd/listen-notification") {
       qDebug() << "Should connect to butlerd";
+      m_socket = new QTcpSocket();
+      auto address = doc["address"].toString();
+      auto tokens = address.split(QRegExp(":"));
+      auto host = tokens[0];
+      auto port = tokens[1].toInt();
+      QObject::connect(m_socket, SIGNAL(connected()), this, SLOT(socketConnected()));
+
+      m_socket->connectToHost(host, port);
   }
 }
 
@@ -95,5 +103,10 @@ void ButlerdConnection::butlerStderrReady()
   if (!p->canReadLine()) { return; }
   QString line = p->readLine();
   qDebug() << "[butler stderr] " << line;
+}
+
+void ButlerdConnection::socketConnected()
+{
+  qDebug() << "connected to butlerd!";
 }
 
