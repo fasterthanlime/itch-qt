@@ -15,11 +15,13 @@ public:
     Q_INVOKABLE void connect(const QString &username, const QString &password);
 
 signals:
+    void gotProfiles(const QStringList &profileNames);
 
 public slots:
     void butlerStdoutReady();
     void butlerStderrReady();
     void socketConnected();
+    void socketReadyRead();
 
 private:
     QObject *m_parent;
@@ -28,6 +30,9 @@ private:
     QTcpSocket *m_socket;
 
     void sendStderr(const QJsonObject &obj);
+    void sendSocket(const QJsonObject &obj);
+
+    void testRequest();
 };
 
 #endif // BUTLERDCONNECTION_H

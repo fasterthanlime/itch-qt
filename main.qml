@@ -11,6 +11,14 @@ ApplicationWindow {
     color: "#2e2b2c"
     title: qsTr("itch")
 
+    Connections {
+        target: ButlerdConnection
+        onGotProfiles: {
+            console.log("Got profiles: ", profileNames)
+            usernameField.text = "Remembered profiles: " + profileNames
+        }
+    }
+
     menuBar: MenuBar {
         Menu {
             title: qsTr("Account")

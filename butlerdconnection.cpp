@@ -6,6 +6,8 @@
 #include <QDataStream>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <QCryptographicHash>
 
 ButlerdConnection::ButlerdConnection(QObject *parent) : QObject(parent)
 {
@@ -82,6 +84,7 @@ void ButlerdConnection::butlerStdoutReady()
       auto host = tokens[0];
       auto port = tokens[1].toInt();
       QObject::connect(m_socket, SIGNAL(connected()), this, SLOT(socketConnected()));
+      QObject::connect(m_socket, SIGNAL(readyRead()), this, SLOT(socketReadyRead()));
 
       m_socket->connectToHost(host, port);
   }
@@ -96,6 +99,15 @@ void ButlerdConnection::sendStderr(const QJsonObject &obj) {
     m_proc->write("\n");
 }
 
+void ButlerdConnection::sendSocket(const QJsonObject &obj) {
+    QJsonDocument resDoc;
+    resDoc.setObject(obj);
+    auto resText = resDoc.toJson(QJsonDocument::Compact);
+    qDebug() << "[sending over socket] " << resText;
+    m_socket->write(resText);
+    m_socket->write("\n");
+}
+
 void ButlerdConnection::butlerStderrReady()
 {
   QProcess *p = (QProcess *)sender();
@@ -107,6 +119,68 @@ void ButlerdConnection::butlerStderrReady()
 
 void ButlerdConnection::socketConnected()
 {
-  qDebug() << "connected to butlerd!";
+    qDebug() << "connected to butlerd!";
+}
+
+void ButlerdConnection::socketReadyRead()
+{
+    qDebug() << "socket ready read";
+    if (!m_socket->canReadLine()) {
+        return;
+    }
+    QString line = m_socket->readLine();
+    qDebug() << "[socket] " << line;
+
+    auto doc = QJsonDocument::fromJson(line.toUtf8());
+    auto id = doc["id"].toInt();
+    auto method = doc["method"].toString();
+    auto params = doc["params"].toObject();
+    if (id != 0) {
+        // it's a response
+        auto result = doc["result"];
+        qDebug() << "Got result: " << result;
+
+        if (id == 1) {
+            // profile result
+            auto profiles = result["profiles"].toArray();
+            QStringList profileNames;
+            foreach (const QJsonValue &profile, profiles) {
+                auto profileName = profile["user"]["displayName"].toString();
+                qDebug() << "Adding profile name " << profileName;
+                profileNames << profileName;
+            }
+            this->gotProfiles(profileNames);
+        }
+    } else {
+        // it's probably a request
+        if (method == "Handshake") {
+            auto message = params["message"].toString();
+            QJsonObject pkt;
+            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.addData(m_secret.toUtf8());
+            hash.addData(message.toUtf8());
+            auto hashResult = hash.result();
+            auto signature = QString::fromLocal8Bit(hashResult.toHex());
+            pkt.insert("jsonrpc", "2.0");
+            pkt.insert("id", doc["id"]);
+            QJsonObject result;
+            result.insert("signature", signature);
+            pkt.insert("result", result);
+            sendSocket(pkt);
+
+            this->testRequest();
+        }
+    }
+}
+
+void ButlerdConnection::testRequest()
+{
+    QJsonObject pkt;
+    pkt.insert("jsonrpc", "2.0");
+    pkt.insert("method", "Profile.List");
+    QJsonObject params;
+    pkt.insert("params", params);
+    pkt.insert("id", 1);
+    sendSocket(pkt);
 }
 
