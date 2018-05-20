@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>../Dev/itch/src/static/images/logos/app-white.svg</file>
+    </qresource>
+</RCC>
